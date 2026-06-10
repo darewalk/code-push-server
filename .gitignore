@@ -19,3 +19,6 @@ coverage
 # vs code
 .history
 .idea
+
+# secrets (do NOT commit) — .env.example 만 커밋
+.env

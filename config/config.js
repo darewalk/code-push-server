@@ -34,7 +34,11 @@ config.development = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     sessionToken: process.env.AWS_SESSION_TOKEN, //(optional)
     bucketName: process.env.BUCKET_NAME,
-    region: process.env.REGION,
+    region: process.env.REGION || "auto",
+    // S3 호환 스토리지(Cloudflare R2 등) 지원. endpoint 지정 시 그쪽으로 업로드.
+    // 미설정이면 기존처럼 실제 AWS S3로 동작(하위호환).
+    endpoint: process.env.S3_ENDPOINT, // 예: https://<account_id>.r2.cloudflarestorage.com
+    s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true", // R2는 true 권장
     downloadUrl: process.env.DOWNLOAD_URL, // binary files download host address.
   },
   // Config for Aliyun OSS (https://www.aliyun.com/product/oss) when storageType value is "oss".
@@ -101,8 +105,8 @@ config.development = {
   // Config for redis (register module, tryLoginTimes module)
   redis: {
     default: {
-      host: "127.0.0.1",
-      port: 6379,
+      host: process.env.REDIS_HOST || "127.0.0.1",
+      port: process.env.REDIS_PORT || 6379,
       retry_strategy: function (options) {
         if (options.error.code === 'ECONNREFUSED') {
           // End reconnecting on a specific error and flush all commands with a individual error

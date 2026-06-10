@@ -1,0 +1,41 @@
+# GCP VM + Cloudflare R2 + 외부 GCP MySQL 구성 (패치된 소스로 빌드).
+# 값은 같은 폴더의 .env 파일에서 주입됨 (.env.example 복사해 채우기).
+#   docker compose up -d --build
+version: "3.7"
+services:
+  server:
+    build: .
+    image: codepush-r2:latest
+    restart: unless-stopped
+    ports:
+      - "80:3000"                 # Cloudflare(Flexible) → VM:80 → 컨테이너:3000
+    environment:
+      NODE_ENV: "production"
+      TOKEN_SECRET: "${TOKEN_SECRET}"
+      # ── DB: 외부 GCP MySQL (codepush 전용 DB/유저) ──
+      RDS_HOST: "${RDS_HOST}"
+      RDS_PORT: "${RDS_PORT}"
+      RDS_USERNAME: "${RDS_USERNAME}"
+      RDS_PASSWORD: "${RDS_PASSWORD}"
+      DATA_BASE: "${DATA_BASE}"    # ← lisong은 DB명을 DATA_BASE 로 읽음(주의)
+      # ── Redis (컨테이너) ──
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      # ── 스토리지: Cloudflare R2 (S3 호환) ──
+      STORAGE_TYPE: "s3"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      BUCKET_NAME: "${BUCKET_NAME}"
+      REGION: "auto"
+      S3_ENDPOINT: "${S3_ENDPOINT}"          # 패치로 추가된 키 → R2 endpoint
+      S3_FORCE_PATH_STYLE: "true"            # 패치로 추가된 키 → R2 권장 true
+      DOWNLOAD_URL: "${DOWNLOAD_URL}"        # R2 custom domain
+    depends_on:
+      - redis
+  redis:
+    image: redis:6-alpine
+    restart: unless-stopped
+    volumes:
+      - data-redis:/data
+volumes:
+  data-redis:

@@ -400,15 +400,27 @@ common.uploadFileToS3 = function (key, filePath) {
         sessionToken: _.get(config, 's3.sessionToken'),
         region: _.get(config, 's3.region')
       });
-      var s3 = new AWS.S3({
+      var s3Options = {
         params: {Bucket: _.get(config, 's3.bucketName')}
-      });
+      };
+      // S3 호환 스토리지(Cloudflare R2 등): endpoint 지정 시 커스텀 엔드포인트 + path-style + SigV4.
+      var s3Endpoint = _.get(config, 's3.endpoint');
+      if (s3Endpoint) {
+        s3Options.endpoint = s3Endpoint;
+        s3Options.s3ForcePathStyle = _.get(config, 's3.s3ForcePathStyle', true);
+        s3Options.signatureVersion = 'v4';
+      }
+      var s3 = new AWS.S3(s3Options);
       fs.readFile(filePath, (err, data) => {
-        s3.upload({
+        var uploadParams = {
           Key: key,
           Body: data,
-          ACL:'public-read',
-        }, (err, response) => {
+        };
+        // R2 등 커스텀 endpoint는 객체 ACL 미지원 → 실제 AWS S3일 때만 public-read 지정.
+        if (!s3Endpoint) {
+          uploadParams.ACL = 'public-read';
+        }
+        s3.upload(uploadParams, (err, response) => {
           if(err) {
             reject(new AppError.AppError(JSON.stringify(err)));
           } else {
